@@ -45,10 +45,6 @@ reset_start_time = 0
 reset_start_pos = HOME_POS
 RESET_DURATION = 1.0  # seconds
 
-resetting = True
-reset_start_time = time.time()
-reset_start_pos = (base_pos, x_pos, y_pos)
-
 print("Controls: A/D = base rotate, W/S = X axis, Up/Down arrows = Y axis, E = reset to home, ESC to quit")
 
 while running:
