@@ -2,4 +2,4 @@
 
 > Using a Robot arm to move objectives and lasers in order to preform experiments relating to Spectroscopy and related fields.
 
-> Install # pip install pygame pyserial before rnning maxarmcontrol.py
+> Install "pip install pygame pyserial" before rnning maxarmcontrol.py
