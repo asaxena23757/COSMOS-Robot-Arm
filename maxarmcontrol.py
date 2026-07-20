@@ -3,11 +3,18 @@ import serial
 import struct
 import time
 
-# --- Setup ---
-SERIAL_PORT = '/dev/cu.usbserial-10'  # update to match your board's current port
-BAUD = 9600  # matches PC_rec's Serial.begin(9600) in the factory firmware
+import socket
 
-ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
+ESP32_IP = "192.168.4.1"  # default AP address
+ESP32_PORT = 8888
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect((ESP32_IP, ESP32_PORT))
+
+def send_angle(pul, time_ms):
+    b, x, y = pul
+    msg = f"{b},{x},{y}\n"
+    sock.sendall(msg.encode())
 
 pygame.init()
 screen = pygame.display.set_mode((400, 300))
@@ -19,13 +26,6 @@ def checksum(data):
     s = sum(data) & 0xFF
     return (~s) & 0xFF
 
-def send_angle(pul, time_ms):
-    msg = bytearray([0xAA, 0x55, FUNC_SET_ANGLE, 8])
-    for p in pul:
-        msg += struct.pack('<h', int(p))
-    msg += struct.pack('<H', time_ms)
-    msg.append(checksum(msg[2:]))
-    ser.write(msg)
 
 # Default/home position (center for all three)
 HOME_POS = (500, 500, 500)
