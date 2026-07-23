@@ -38,11 +38,11 @@ HOME_POS = (500, 500, 500)
 base_pos, x_pos, y_pos = HOME_POS
 last_base, last_x, last_y = base_pos, x_pos, y_pos
 
-STEP = 100
+STEP = 6
 running = True
 clock = pygame.time.Clock()
 
-MOVE_STEP = 10           # units moved per tick on the active axis while animating, regardless of distance
+MOVE_STEP = 10          # units moved per tick on the active axis while animating, regardless of distance
 moving = True           # generic "animating toward move_target" flag
 move_target = HOME_POS  # where we're currently animating toward
 
@@ -140,7 +140,7 @@ while running:
                 y_pos = step_toward(y_pos, move_target[2], MOVE_STEP)
 
     if (base_pos, x_pos, y_pos) != (last_base, last_x, last_y):
-        send_angle([base_pos, x_pos, y_pos], 600)
+        send_angle([base_pos, x_pos, y_pos], 100) 
         last_base, last_x, last_y = base_pos, x_pos, y_pos
 
     screen.fill((30, 30, 30))
