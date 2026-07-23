@@ -23,13 +23,6 @@ def send_angle(pul, time_ms):
     msg.append(checksum(msg[2:]))
     ser.write(msg)
 
-def step_toward(current, target, step):
-    if current < target:
-        return min(current + step, target)
-    elif current > target:
-        return max(current - step, target)
-    return current
-
 pygame.init()
 screen = pygame.display.set_mode((400, 300))
 pygame.display.set_caption("MaxArm Keyboard Control")
@@ -42,12 +35,19 @@ STEP = 6
 running = True
 clock = pygame.time.Clock()
 
-MOVE_STEP = 10          # units moved per tick on the active axis while animating, regardless of distance
-moving = True           # generic "animating toward move_target" flag
+moving = False          # animating toward move_target (E or F/G/H)
 move_target = HOME_POS  # where we're currently animating toward
 
 AXIS_ORDER = ['base', 'x', 'y']  # order in which axes move one-at-a-time toward a programmed position
 current_axis_idx = 0
+
+# --- Direct-jump timing (applies to ALL automated moves: E and F/G/H) ---
+# Each axis moves to its target in ONE command, with the servo's travel time
+# scaled linearly to the distance: time_ms = distance * TIME_PER_UNIT_MS.
+# e.g. a 470-unit move -> 4700 ms. Axes move strictly one at a time.
+TIME_PER_UNIT_MS = 10     # ms of servo travel time per pulse-unit of distance
+direct_sent = False       # has the single big command for the current axis been sent yet?
+direct_end_time = 0.0     # wall-clock time (time.time()) when the current axis's move should be done
 
 # --- Saved position slots (F / G / H) ---
 # Set any of these to a (base, x, y) tuple in code to hardcode that slot.
@@ -60,6 +60,14 @@ SAVED_POSITIONS = {
     pygame.K_h: None,
 }
 SLOT_NAMES = {pygame.K_f: 'f', pygame.K_g: 'g', pygame.K_h: 'h'}
+
+def start_move(target):
+    """Begin an automated one-axis-at-a-time direct move toward target."""
+    global moving, move_target, current_axis_idx, direct_sent
+    moving = True
+    move_target = target
+    current_axis_idx = 0
+    direct_sent = False
 
 print("Controls: A/D = base rotate, W/S = X axis, Up/Down arrows = Y axis, "
       "E = reset to home, F/G/H = save (if unset) or go to slot, ESC to quit")
@@ -75,9 +83,7 @@ while running:
             running = False
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
-            moving = True
-            move_target = HOME_POS
-            current_axis_idx = 0
+            start_move(HOME_POS)
 
         if event.type == pygame.KEYDOWN and event.key in SAVED_POSITIONS:
             name = SLOT_NAMES[event.key]
@@ -88,9 +94,7 @@ while running:
             else:
                 # Already set (hardcoded or previously saved) -> move there
                 print(f"press {name} for {SAVED_POSITIONS[event.key]}")
-                moving = True
-                move_target = SAVED_POSITIONS[event.key]
-                current_axis_idx = 0
+                start_move(SAVED_POSITIONS[event.key])
 
     keys = pygame.key.get_pressed()
 
@@ -116,14 +120,14 @@ while running:
         running = False
 
     if moving:
-        # Skip over any axes already at their target (e.g. an axis that
-        # didn't need to move at all for this particular recall)
+        # Skip over any axes already at their target
         while current_axis_idx < len(AXIS_ORDER):
             axis = AXIS_ORDER[current_axis_idx]
             current_val = {'base': base_pos, 'x': x_pos, 'y': y_pos}[axis]
             target_val = {'base': move_target[0], 'x': move_target[1], 'y': move_target[2]}[axis]
             if current_val == target_val:
                 current_axis_idx += 1
+                direct_sent = False
                 continue
             break
 
@@ -132,15 +136,35 @@ while running:
             current_axis_idx = 0
         else:
             axis = AXIS_ORDER[current_axis_idx]
-            if axis == 'base':
-                base_pos = step_toward(base_pos, move_target[0], MOVE_STEP)
-            elif axis == 'x':
-                x_pos = step_toward(x_pos, move_target[1], MOVE_STEP)
+            current_val = {'base': base_pos, 'x': x_pos, 'y': y_pos}[axis]
+            target_val = {'base': move_target[0], 'x': move_target[1], 'y': move_target[2]}[axis]
+
+            if not direct_sent:
+                # One giant step for this axis: jump straight to target, with
+                # travel time scaled linearly to the distance being covered.
+                distance = abs(target_val - current_val)
+                time_ms = distance * TIME_PER_UNIT_MS
+
+                if axis == 'base':
+                    base_pos = target_val
+                elif axis == 'x':
+                    x_pos = target_val
+                else:
+                    y_pos = target_val
+
+                send_angle([base_pos, x_pos, y_pos], time_ms)
+                last_base, last_x, last_y = base_pos, x_pos, y_pos  # suppress duplicate send below
+
+                direct_end_time = time.time() + (time_ms / 1000.0)
+                direct_sent = True
             else:
-                y_pos = step_toward(y_pos, move_target[2], MOVE_STEP)
+                # Wait for the servo's travel time to elapse before the next axis
+                if time.time() >= direct_end_time:
+                    current_axis_idx += 1
+                    direct_sent = False
 
     if (base_pos, x_pos, y_pos) != (last_base, last_x, last_y):
-        send_angle([base_pos, x_pos, y_pos], 100) 
+        send_angle([base_pos, x_pos, y_pos], 400)
         last_base, last_x, last_y = base_pos, x_pos, y_pos
 
     screen.fill((30, 30, 30))
