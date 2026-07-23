@@ -4,7 +4,7 @@ import struct
 import time
 
 # --- Setup ---
-SERIAL_PORT = '/dev/cu.usbserial-10'  # update to match your board's current port
+SERIAL_PORT = '/dev/cu.usbserial-110'  # update to match your board's current port
 BAUD = 9600
 
 ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
@@ -38,7 +38,7 @@ HOME_POS = (500, 500, 500)
 base_pos, x_pos, y_pos = HOME_POS
 last_base, last_x, last_y = base_pos, x_pos, y_pos
 
-STEP = 10
+STEP = 100
 running = True
 clock = pygame.time.Clock()
 
@@ -140,7 +140,7 @@ while running:
                 y_pos = step_toward(y_pos, move_target[2], MOVE_STEP)
 
     if (base_pos, x_pos, y_pos) != (last_base, last_x, last_y):
-        send_angle([base_pos, x_pos, y_pos], 60)
+        send_angle([base_pos, x_pos, y_pos], 600)
         last_base, last_x, last_y = base_pos, x_pos, y_pos
 
     screen.fill((30, 30, 30))
