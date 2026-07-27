@@ -24,14 +24,18 @@ def send_angle(pul, time_ms):
     ser.write(msg)
 
 pygame.init()
+
 screen = pygame.display.set_mode((400, 300))
 pygame.display.set_caption("MaxArm Keyboard Control")
 
 HOME_POS = (500, 500, 500)
 base_pos, x_pos, y_pos = HOME_POS
 last_base, last_x, last_y = base_pos, x_pos, y_pos
+STARTUP_SYNC_MS = 3000
 
-STEP = 6
+send_angle([base_pos, x_pos, y_pos], STARTUP_SYNC_MS)
+time.sleep(STARTUP_SYNC_MS / 1000.0)
+STEP = 1
 running = True
 clock = pygame.time.Clock()
 
@@ -45,7 +49,7 @@ current_axis_idx = 0
 # Each axis moves to its target in ONE command, with the servo's travel time
 # scaled linearly to the distance: time_ms = distance * TIME_PER_UNIT_MS.
 # e.g. a 470-unit move -> 4700 ms. Axes move strictly one at a time.
-TIME_PER_UNIT_MS = 10     # ms of servo travel time per pulse-unit of distance
+TIME_PER_UNIT_MS = 100     # ms of servo travel time per pulse-unit of distance
 direct_sent = False       # has the single big command for the current axis been sent yet?
 direct_end_time = 0.0     # wall-clock time (time.time()) when the current axis's move should be done
 
@@ -140,7 +144,7 @@ while running:
             target_val = {'base': move_target[0], 'x': move_target[1], 'y': move_target[2]}[axis]
 
             if not direct_sent:
-                # One giant step for this axis: jump straight to target, with
+                # One giant step for this axis: jump straight to target, with f
                 # travel time scaled linearly to the distance being covered.
                 distance = abs(target_val - current_val)
                 time_ms = distance * TIME_PER_UNIT_MS
@@ -164,7 +168,7 @@ while running:
                     direct_sent = False
 
     if (base_pos, x_pos, y_pos) != (last_base, last_x, last_y):
-        send_angle([base_pos, x_pos, y_pos], 400)
+        send_angle([base_pos, x_pos, y_pos], 100)
         last_base, last_x, last_y = base_pos, x_pos, y_pos
 
     screen.fill((30, 30, 30))
