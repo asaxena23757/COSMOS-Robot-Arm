@@ -124,7 +124,6 @@ while running:
         running = False
 
     if moving:
-        # Skip over any axes already at their target
         while current_axis_idx < len(AXIS_ORDER):
             axis = AXIS_ORDER[current_axis_idx]
             current_val = {'base': base_pos, 'x': x_pos, 'y': y_pos}[axis]
